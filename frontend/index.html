@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TecHacker - Detector de Phishing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ TecHacker</h1>
+            <p class="subtitle">Ferramenta de Detecção de Phishing</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <h2>Analisar URL</h2>
+                <form id="analyzeForm">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="urlInput" 
+                            placeholder="Digite a URL para análise (ex: https://exemplo.com)"
+                            required
+                        >
+                        <button type="submit" id="analyzeBtn">
+                            <span id="btnText">Analisar</span>
+                            <span id="btnLoader" class="loader" style="display: none;"></span>
+                        </button>
+                    </div>
+                    <p class="help-text">
+                        💡 Dica: Cole a URL suspeita que você recebeu por email, SMS ou redes sociais
+                    </p>
+                </form>
+            </section>
+
+            <section id="resultsSection" class="results-section" style="display: none;">
+                <h2>Resultado da Análise</h2>
+                
+                <div id="resultCard" class="result-card">
+                    <!-- Status principal -->
+                    <div id="mainStatus" class="main-status"></div>
+                    
+                    <!-- Informações da URL -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">URL Analisada:</span>
+                            <span id="analyzedUrl" class="info-value"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Domínio:</span>
+                            <span id="domain" class="info-value"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Nível de Risco:</span>
+                            <span id="riskLevel" class="info-value risk-badge"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Score de Phishing:</span>
+                            <span id="phishingScore" class="info-value"></span>
+                        </div>
+                    </div>
+
+                    <!-- Barra de progresso do score -->
+                    <div class="score-bar-container">
+                        <div id="scoreBar" class="score-bar"></div>
+                    </div>
+
+                    <!-- Recomendação -->
+                    <div id="recommendation" class="recommendation"></div>
+
+                    <!-- Avisos -->
+                    <div class="warnings-section">
+                        <h3>⚠️ Características Detectadas</h3>
+                        <ul id="warningsList"></ul>
+                    </div>
+
+                    <!-- Detalhes técnicos (colapsável) -->
+                    <details class="technical-details">
+                        <summary>🔍 Detalhes Técnicos</summary>
+                        <div id="technicalDetails" class="details-content"></div>
+                    </details>
+                </div>
+            </section>
+
+            <!-- Seção de informações -->
+            <section class="info-section">
+                <h2>ℹ️ Sobre a Ferramenta</h2>
+                <div class="info-cards">
+                    <div class="info-card">
+                        <h3>🎯 O que verificamos?</h3>
+                        <ul>
+                            <li>Domínios em listas de phishing conhecidas</li>
+                            <li>Números substituindo letras no domínio</li>
+                            <li>Uso excessivo de subdomínios</li>
+                            <li>Caracteres especiais suspeitos na URL</li>
+                            <li>Imitação de marcas conhecidas</li>
+                            <li>Certificados SSL e conexão HTTPS</li>
+                        </ul>
+                    </div>
+                    <div class="info-card">
+                        <h3>🔒 Dicas de Segurança</h3>
+                        <ul>
+                            <li>Sempre verifique o endereço completo da URL</li>
+                            <li>Desconfie de URLs muito longas ou complexas</li>
+                            <li>Verifique se o site usa HTTPS (cadeado)</li>
+                            <li>Não clique em links de emails suspeitos</li>
+                            <li>Em caso de dúvida, acesse o site oficial diretamente</li>
+                            <li>Nunca forneça dados sensíveis em sites suspeitos</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 TecHacker - Ferramenta Educacional de Detecção de Phishing</p>
+            <p class="footer-note">⚠️ Esta ferramenta é para fins educacionais. Sempre use bom senso ao navegar na internet.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
