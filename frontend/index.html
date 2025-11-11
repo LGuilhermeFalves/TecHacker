@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TecHacker - Detector de Phishing</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </head>
 <body>
     <div class="container">
@@ -33,6 +35,31 @@
                         💡 Dica: Cole a URL suspeita que você recebeu por email, SMS ou redes sociais
                     </p>
                 </form>
+                
+                <!-- Botões de ação -->
+                <div class="action-buttons">
+                    <button type="button" id="historyBtn" class="secondary-btn">
+                        📜 Ver Histórico
+                    </button>
+                    <button type="button" id="exportBtn" class="secondary-btn" style="display: none;">
+                        💾 Exportar Resultado
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Seção de Histórico -->
+            <section id="historySection" class="history-section" style="display: none;">
+                <div class="section-header">
+                    <h2>📜 Histórico de Análises</h2>
+                    <button id="closeHistoryBtn" class="close-btn">✕</button>
+                </div>
+                <div id="historyContent">
+                    <p class="empty-message">Nenhuma análise no histórico ainda.</p>
+                </div>
+                <div class="history-actions">
+                    <button id="clearHistoryBtn" class="danger-btn">🗑️ Limpar Histórico</button>
+                    <button id="exportHistoryBtn" class="secondary-btn">💾 Exportar Histórico</button>
+                </div>
             </section>
 
             <section id="resultsSection" class="results-section" style="display: none;">
@@ -74,6 +101,47 @@
                     <div class="warnings-section">
                         <h3>⚠️ Características Detectadas</h3>
                         <ul id="warningsList"></ul>
+                    </div>
+                    
+                    <!-- Gráfico de Características -->
+                    <div class="chart-section">
+                        <h3>📊 Distribuição de Características</h3>
+                        <canvas id="characteristicsChart"></canvas>
+                    </div>
+                    
+                    <!-- Análises Avançadas (Conceito B) -->
+                    <div id="advancedSection" class="advanced-section" style="display: none;">
+                        <h3>🔬 Análises Avançadas</h3>
+                        
+                        <!-- WHOIS -->
+                        <details class="advanced-detail" open>
+                            <summary>📋 Informações WHOIS</summary>
+                            <div id="whoisDetails" class="advanced-content"></div>
+                        </details>
+                        
+                        <!-- SSL -->
+                        <details class="advanced-detail" open>
+                            <summary>🔒 Certificado SSL/TLS</summary>
+                            <div id="sslDetails" class="advanced-content"></div>
+                        </details>
+                        
+                        <!-- Similaridade com Marcas -->
+                        <details class="advanced-detail" open>
+                            <summary>🎯 Similaridade com Marcas</summary>
+                            <div id="similarityDetails" class="advanced-content"></div>
+                        </details>
+                        
+                        <!-- Conteúdo da Página -->
+                        <details class="advanced-detail" open>
+                            <summary>📄 Análise de Conteúdo</summary>
+                            <div id="contentDetails" class="advanced-content"></div>
+                        </details>
+                        
+                        <!-- Redirecionamentos -->
+                        <details class="advanced-detail" open>
+                            <summary>🔀 Redirecionamentos</summary>
+                            <div id="redirectDetails" class="advanced-content"></div>
+                        </details>
                     </div>
 
                     <!-- Detalhes técnicos (colapsável) -->
@@ -118,6 +186,15 @@
             <p>&copy; 2024 TecHacker - Ferramenta Educacional de Detecção de Phishing</p>
             <p class="footer-note">⚠️ Esta ferramenta é para fins educacionais. Sempre use bom senso ao navegar na internet.</p>
         </footer>
+    </div>
+    
+    <!-- Modal de Explicação -->
+    <div id="explanationModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="modalTitle"></h2>
+            <div id="modalBody"></div>
+        </div>
     </div>
 
     <script src="script.js"></script>

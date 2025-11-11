@@ -5,16 +5,23 @@ import tldextract
 import string
 from typing import Dict, List, Any
 import logging
+from advanced_analyzer import AdvancedAnalyzer
 
 logger = logging.getLogger(__name__)
 
 class URLAnalyzer:
     """
     Classe para análise de URLs e detecção de características de phishing
-    Implementação do conceito C
+    Implementação dos conceitos C e B
     """
     
-    def __init__(self):
+    def __init__(self, enable_advanced=True):
+        # Inicializar analisador avançado (Conceito B)
+        self.enable_advanced = enable_advanced
+        if enable_advanced:
+            self.advanced = AdvancedAnalyzer()
+        else:
+            self.advanced = None
         # Lista de domínios conhecidos de marcas populares
         self.legitimate_brands = [
             'google', 'facebook', 'amazon', 'microsoft', 'apple', 'paypal',
@@ -101,7 +108,22 @@ class URLAnalyzer:
                 'recommendation': self._generate_recommendation(score)
             }
             
-            logger.info(f"URL analisada: {url} - Score: {score} - Phishing: {is_phishing}")
+            # Análises avançadas (Conceito B)
+            if self.enable_advanced and self.advanced:
+                advanced_results = self._perform_advanced_analysis(url, extracted, checks)
+                result['advanced'] = advanced_results
+                
+                # Recalcular score com análises avançadas
+                advanced_score_adjustment = self._calculate_advanced_score(advanced_results)
+                result['phishing_score'] = min(score + advanced_score_adjustment, 100)
+                result['is_phishing'] = result['phishing_score'] >= 50
+                result['risk_level'] = self._get_risk_level(result['phishing_score'])
+                
+                # Adicionar avisos avançados
+                advanced_warnings = self._generate_advanced_warnings(advanced_results)
+                result['warnings'].extend(advanced_warnings)
+            
+            logger.info(f"URL analisada: {url} - Score: {result['phishing_score']} - Phishing: {result['is_phishing']}")
             
             return result
             
@@ -316,3 +338,162 @@ class URLAnalyzer:
             return "🚨 URL altamente suspeita. Não é recomendado acessar ou fornecer informações."
         else:
             return "🛑 PERIGO! URL com fortes indícios de phishing. NÃO acesse e NÃO forneça dados."
+    
+    def _perform_advanced_analysis(self, url: str, extracted, checks: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Realiza análises avançadas (Conceito B)
+        """
+        domain_full = f"{extracted.domain}.{extracted.suffix}"
+        hostname = extracted.domain + '.' + extracted.suffix if extracted.suffix else extracted.domain
+        
+        advanced_results = {}
+        
+        # 1. Análise WHOIS
+        logger.info(f"Executando análise WHOIS para {domain_full}")
+        advanced_results['whois'] = self.advanced.analyze_whois(domain_full)
+        
+        # 2. Verificar DNS dinâmico
+        advanced_results['uses_dynamic_dns'] = self.advanced.check_dynamic_dns(domain_full)
+        
+        # 3. Análise SSL (apenas se usar HTTPS)
+        if checks['uses_https']:
+            logger.info(f"Executando análise SSL para {hostname}")
+            advanced_results['ssl'] = self.advanced.analyze_ssl_certificate(hostname)
+        else:
+            advanced_results['ssl'] = {'available': False, 'error': 'Site não usa HTTPS'}
+        
+        # 4. Verificar redirecionamentos
+        logger.info(f"Verificando redirecionamentos para {url}")
+        advanced_results['redirects'] = self.advanced.check_redirects(url)
+        
+        # 5. Similaridade com marcas (Levenshtein)
+        logger.info(f"Calculando similaridade com marcas conhecidas")
+        advanced_results['brand_similarity'] = self.advanced.calculate_brand_similarity(extracted.domain)
+        
+        # 6. Análise de conteúdo da página
+        logger.info(f"Analisando conteúdo da página {url}")
+        advanced_results['content'] = self.advanced.analyze_page_content(url)
+        
+        return advanced_results
+    
+    def _calculate_advanced_score(self, advanced: Dict[str, Any]) -> int:
+        """
+        Calcula ajuste no score baseado em análises avançadas
+        Retorna pontos adicionais (0-50)
+        """
+        additional_score = 0
+        
+        # WHOIS - Domínio novo é suspeito
+        whois_data = advanced.get('whois', {})
+        if whois_data.get('available') and whois_data.get('is_new_domain'):
+            additional_score += 15
+            logger.info(f"Domínio novo detectado (< 1 ano): +15 pontos")
+        
+        # DNS Dinâmico - Muito suspeito
+        if advanced.get('uses_dynamic_dns'):
+            additional_score += 20
+            logger.info(f"DNS dinâmico detectado: +20 pontos")
+        
+        # SSL
+        ssl_data = advanced.get('ssl', {})
+        if ssl_data.get('available'):
+            if ssl_data.get('is_self_signed'):
+                additional_score += 15
+                logger.info(f"Certificado auto-assinado: +15 pontos")
+            if ssl_data.get('is_expired'):
+                additional_score += 20
+                logger.info(f"Certificado expirado: +20 pontos")
+            if not ssl_data.get('domain_matches'):
+                additional_score += 15
+                logger.info(f"Domínio não coincide com certificado: +15 pontos")
+            if ssl_data.get('expires_soon'):
+                additional_score += 5
+                logger.info(f"Certificado expira em breve: +5 pontos")
+        
+        # Redirecionamentos
+        redirects = advanced.get('redirects', {})
+        if redirects.get('has_multiple_redirects'):
+            additional_score += 10
+            logger.info(f"Múltiplos redirecionamentos: +10 pontos")
+        if redirects.get('crosses_domains'):
+            additional_score += 12
+            logger.info(f"Redirecionamento entre domínios: +12 pontos")
+        
+        # Similaridade com marcas (Levenshtein)
+        similarity = advanced.get('brand_similarity', {})
+        if similarity.get('is_similar_to_brand'):
+            additional_score += 20
+            logger.info(f"Alta similaridade com marca ({similarity.get('most_similar_brand')}): +20 pontos")
+        
+        # Conteúdo da página
+        content = advanced.get('content', {})
+        if content.get('available'):
+            if content.get('has_login_form'):
+                additional_score += 15
+                logger.info(f"Formulário de login detectado: +15 pontos")
+            if content.get('asks_for_financial_info'):
+                additional_score += 20
+                logger.info(f"Solicita informações financeiras: +20 pontos")
+        
+        logger.info(f"Score adicional de análises avançadas: +{additional_score} pontos")
+        return additional_score
+    
+    def _generate_advanced_warnings(self, advanced: Dict[str, Any]) -> List[str]:
+        """
+        Gera avisos baseados em análises avançadas
+        """
+        warnings = []
+        
+        # WHOIS
+        whois_data = advanced.get('whois', {})
+        if whois_data.get('available'):
+            if whois_data.get('is_new_domain'):
+                age_days = whois_data.get('domain_age_days', 0)
+                warnings.append(f"🚨 Domínio muito novo ({age_days} dias) - comum em phishing")
+        
+        # DNS Dinâmico
+        if advanced.get('uses_dynamic_dns'):
+            warnings.append("🚨 CRÍTICO: Usa serviço de DNS dinâmico (no-ip, dyndns, etc)")
+        
+        # SSL
+        ssl_data = advanced.get('ssl', {})
+        if ssl_data.get('available'):
+            if ssl_data.get('is_self_signed'):
+                warnings.append("⚠️ Certificado SSL auto-assinado (não confiável)")
+            if ssl_data.get('is_expired'):
+                warnings.append("🚨 CRÍTICO: Certificado SSL expirado")
+            if not ssl_data.get('domain_matches'):
+                warnings.append("⚠️ Domínio não corresponde ao certificado SSL")
+            if ssl_data.get('uses_free_ssl'):
+                warnings.append("ℹ️ Usa certificado SSL gratuito (Let's Encrypt) - comum em phishing")
+        elif not advanced.get('checks', {}).get('uses_https'):
+            # Já tem aviso no básico
+            pass
+        
+        # Redirecionamentos
+        redirects = advanced.get('redirects', {})
+        if redirects.get('has_multiple_redirects'):
+            count = redirects.get('redirect_count', 0)
+            warnings.append(f"⚠️ Múltiplos redirecionamentos detectados ({count})")
+        if redirects.get('crosses_domains'):
+            warnings.append("⚠️ Redireciona para domínio diferente")
+        
+        # Similaridade
+        similarity = advanced.get('brand_similarity', {})
+        if similarity.get('is_similar_to_brand'):
+            brand = similarity.get('most_similar_brand')
+            score = similarity.get('similarity_score')
+            warnings.append(f"🚨 ALERTA: {score}% similar a '{brand}' (possível typosquatting)")
+        
+        # Conteúdo
+        content = advanced.get('content', {})
+        if content.get('available'):
+            if content.get('has_login_form'):
+                warnings.append("⚠️ Página contém formulário de login")
+            if content.get('has_sensitive_fields'):
+                count = content.get('sensitive_field_count', 0)
+                warnings.append(f"⚠️ Solicita informações sensíveis ({count} campos)")
+            if content.get('asks_for_financial_info'):
+                warnings.append("🚨 CRÍTICO: Solicita informações financeiras (cartão, CVV, etc)")
+        
+        return warnings
